@@ -1,0 +1,46 @@
+@startuml C3_Альтернативное_Решение_Свиноводство
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+title Компонентная диаграмма системы мониторинга свиноводства - Альтернативное решение
+
+Container_Boundary(пользователи, "Взаимодействие с пользователями") {
+    Container(веб_портал, "Веб-портал", "React модуль", "Расширение для портала АгроТех")
+    Container(мобил_приложение, "Мобильное приложение", "Flutter модуль", "Расширение для мобильного приложения")
+}
+
+Container(api_шлюз, "API шлюз", "Node.js", "Единая точка входа для API") {
+    Boundary(контроллеры, "Внешний слой API", "Проверка прав доступа") {
+        Component(UserController, "UserController", "Управление пользователями")
+        Component(ScheduleController, "ScheduleController", "Доступ к расписанию и управление им")
+        Component(MetricController, "MetricController", "Отображение и внесение метрик")
+        Component(ReportController, "ReportController", "Запрос и отображение отчётов")
+        Component(EventController, "EventController", "Доставка событий")
+    }
+ 
+    Component(natsCore, "Брокер сообщений", "NATS Core", "Прослойка между слоями API")
+
+    Component(сервис, "Бизнес логика", "Передача запросов и возврат ответов")
+
+    Component(redis, "Redis", "Кэш запросов")
+}
+
+' Шина событий
+Container(natsJetStream, "Брокер сообщений", "NATS JetStream", "Команды, телеметрия, метаданные")
+
+' Взаимодействие с пользователями
+Rel(пользователи, контроллеры, "API запросы", "HTTPS/WebSocket")
+
+' Внутреннее взаимодействие
+BiRel(UserController, natsCore, "Запрос к бизнес логике")
+BiRel(ScheduleController, natsCore, "Запрос к бизнес логике")
+BiRel(MetricController, natsCore, "Запрос к бизнес логике")
+BiRel(ReportController, natsCore, "Запрос к бизнес логике")
+BiRel(EventController, natsCore, "Запрос к бизнес логике")
+BiRel(natsCore, сервис, "Запрос к бизнес логике")
+BiRel(redis, сервис, "Доступ к кэшу")
+
+' Взаимодействие с NATS
+BiRel(сервис, natsJetStream, "Запрос к бизнес логике")
+
+@enduml

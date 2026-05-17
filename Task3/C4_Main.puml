@@ -1,0 +1,138 @@
+@startuml C4_Основное_Решение_Свиноводство
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+title Диаграмма классов системы мониторинга свиноводства - Основное решение
+
+class APIGateway {
+    - express: Express
+    - authMiddleware: AuthMiddleware
+    - userController: UserController
+    - metricController: MetricController
+    - eventController: EventController
+    - scheduleController: ScheduleController
+    - reportController: ReportController
+    + start(): void
+    + setupRoutes(): void
+}
+
+class AuthMiddleware {
+    - jwtSecret: string
+    + authenticate(req, res, next): void
+    + authorize(roles: string[]): Function
+}
+
+class UserController {
+    - userService: UserService
+    + getUsers(req, res): void
+    + getUserById(req, res): void
+    + updateUser(req, res): void
+}
+
+class MetricController {
+    - metricService: MetricService
+    + getMetrics(req, res): void
+    + createMetric(req, res): void
+    + getMetricHistory(req, res): void
+}
+
+class EventController {
+    - eventService: EventService
+    + getEvents(req, res): void
+    + createEvent(req, res): void
+    + subscribeToEvents(req, res): void
+}
+
+class ScheduleController {
+    - scheduleService: ScheduleService
+    + getSchedules(req, res): void
+    + createSchedule(req, res): void
+    + updateSchedule(req, res): void
+}
+
+class ReportController {
+    - reportService: ReportService
+    + generateReport(req, res): void
+    + getReport(req, res): void
+    + downloadReport(req, res): void
+}
+
+class UserService {
+    - userRepository: UserRepository
+    - natsClient: NATSClient
+    + getUsers(): Promise<User[]>
+    + getUserById(id: string): Promise<User>
+    + updateUser(id: string, data: UserData): Promise<User>
+}
+
+class MetricService {
+    - metricRepository: MetricRepository
+    - natsClient: NATSClient
+    + getMetrics(filters: MetricFilter): Promise<Metric[]>
+    + createMetric(metricData: MetricData): Promise<Metric>
+    + getMetricHistory(metricId: string): Promise<MetricHistory[]>
+}
+
+class EventService {
+    - eventRepository: EventRepository
+    - natsClient: NATSClient
+    + getEvents(filters: EventFilter): Promise<Event[]>
+    + createEvent(eventData: EventData): Promise<Event>
+    + subscribeToEvents(callback: Function): void
+}
+
+class ScheduleService {
+    - scheduleRepository: ScheduleRepository
+    - natsClient: NATSClient
+    + getSchedules(farmId: string): Promise<Schedule[]>
+    + createSchedule(scheduleData: ScheduleData): Promise<Schedule>
+    + updateSchedule(id: string, updates: ScheduleUpdate): Promise<Schedule>
+}
+
+class ReportService {
+    - reportRepository: ReportRepository
+    - natsClient: NATSClient
+    + generateReport(params: ReportParams): Promise<Report>
+    + getReport(id: string): Promise<Report>
+    + downloadReport(id: string): Promise<Buffer>
+}
+
+class NATSClient {
+    - connection: Connection
+    - subjects: Map<string, Subscription>
+    + connect(): Promise<void>
+    + publish(subject: string, data: any): void
+    + subscribe(subject: string, callback: Function): void
+    + request(subject: string, data: any): Promise<any>
+}
+
+' Relationships
+APIGateway --> AuthMiddleware
+APIGateway --> UserController
+APIGateway --> MetricController
+APIGateway --> EventController
+APIGateway --> ScheduleController
+APIGateway --> ReportController
+
+UserController --> UserService
+MetricController --> MetricService
+EventController --> EventService
+ScheduleController --> ScheduleService
+ReportController --> ReportService
+
+UserService --> NATSClient
+MetricService --> NATSClient
+EventService --> NATSClient
+ScheduleService --> NATSClient
+ReportService --> NATSClient
+
+note right of NATSClient
+  Используется для коммуникации
+  с другими сервисами системы:
+  - Аналитика
+  - Мониторинг
+  - Свиноводство
+  - Агенты ферм
+end note
+
+@enduml

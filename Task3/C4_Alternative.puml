@@ -1,0 +1,144 @@
+@startuml C4_Альтернативное_Решение_Свиноводство
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+title Диаграмма классов системы мониторинга свиноводства - Альтернативное решение
+
+class APIGateway {
+    - express: Express
+    - authMiddleware: AuthMiddleware
+    - internalNATS: InternalNATSClient
+    - redisClient: RedisClient
+    - userController: UserController
+    - metricController: MetricController
+    - eventController: EventController
+    - scheduleController: ScheduleController
+    - reportController: ReportController
+    + start(): void
+    + setupRoutes(): void
+}
+
+class InternalNATSClient {
+    - connection: Connection
+    - serviceName: string
+    + request(service: string, method: string, data: any): Promise<any>
+    + publish(event: string, data: any): void
+    + subscribe(event: string, callback: Function): void
+}
+
+class RedisClient {
+    - client: Redis
+    + get(key: string): Promise<any>
+    + set(key: string, value: any, ttl?: number): Promise<void>
+    + del(key: string): Promise<void>
+    + exists(key: string): Promise<boolean>
+}
+
+class UserController {
+    - internalNATS: InternalNATSClient
+    - redis: RedisClient
+    + getUsers(req, res): Promise<void>
+    + getUserById(req, res): Promise<void>
+    + updateUser(req, res): Promise<void>
+    - cacheUserData(userId: string, data: any): Promise<void>
+    - getCachedUser(userId: string): Promise<any>
+}
+
+class MetricController {
+    - internalNATS: InternalNATSClient
+    - redis: RedisClient
+    + getMetrics(req, res): Promise<void>
+    + createMetric(req, res): Promise<void>
+    + getMetricHistory(req, res): Promise<void>
+    - cacheMetrics(farmId: string, metrics: any[]): Promise<void>
+    - getCachedMetrics(farmId: string): Promise<any>
+}
+
+class EventController {
+    - internalNATS: InternalNATSClient
+    - redis: RedisClient
+    + getEvents(req, res): Promise<void>
+    + createEvent(req, res): Promise<void>
+    + subscribeToEvents(req, res): Promise<void>
+    - cacheEvents(farmId: string, events: any[]): Promise<void>
+}
+
+class ScheduleController {
+    - internalNATS: InternalNATSClient
+    - redis: RedisClient
+    + getSchedules(req, res): Promise<void>
+    + createSchedule(req, res): Promise<void>
+    + updateSchedule(req, res): Promise<void>
+    - cacheSchedules(farmId: string, schedules: any[]): Promise<void>
+}
+
+class ReportController {
+    - internalNATS: InternalNATSClient
+    - redis: RedisClient
+    + generateReport(req, res): Promise<void>
+    + getReport(req, res): Promise<void>
+    + downloadReport(req, res): Promise<void>
+    - cacheReport(reportId: string, report: any): Promise<void>
+}
+
+class BusinessServiceLayer {
+    - internalNATS: InternalNATSClient
+    - externalNATS: NATSJetStreamClient
+    - redis: RedisClient
+    + handleUserRequest(method: string, data: any): Promise<any>
+    + handleMetricRequest(method: string, data: any): Promise<any>
+    + handleEventRequest(method: string, data: any): Promise<any>
+    + handleScheduleRequest(method: string, data: any): Promise<any>
+    + handleReportRequest(method: string, data: any): Promise<any>
+}
+
+class NATSJetStreamClient {
+    - connection: Connection
+    - jetStream: JetStream
+    + publishPersistent(subject: string, data: any): Promise<void>
+    + subscribeDurable(stream: string, consumer: string, callback: Function): void
+    + requestWithRetry(subject: string, data: any, retries: number): Promise<any>
+}
+
+' Relationships
+APIGateway --> InternalNATSClient
+APIGateway --> RedisClient
+APIGateway --> UserController
+APIGateway --> MetricController
+APIGateway --> EventController
+APIGateway --> ScheduleController
+APIGateway --> ReportController
+
+UserController --> InternalNATSClient
+UserController --> RedisClient
+MetricController --> InternalNATSClient
+MetricController --> RedisClient
+EventController --> InternalNATSClient
+EventController --> RedisClient
+ScheduleController --> InternalNATSClient
+ScheduleController --> RedisClient
+ReportController --> InternalNATSClient
+ReportController --> RedisClient
+
+InternalNATSClient --> BusinessServiceLayer
+BusinessServiceLayer --> NATSJetStreamClient
+BusinessServiceLayer --> RedisClient
+
+note right of InternalNATSClient
+  Внутренняя шина для коммуникации
+  между компонентами API шлюза
+end note
+
+note right of NATSJetStreamClient
+  Внешняя шина для коммуникации
+  с другими сервисами системы
+  с гарантированной доставкой
+end note
+
+note right of RedisClient
+  Кэширование часто запрашиваемых данных:
+  - Метрики
+  - Отчёты
+end note
+
+@enduml

@@ -1,0 +1,40 @@
+@startuml C3_Основное_Решение_Свиноводство
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+title Компонентная диаграмма системы мониторинга свиноводства - Основное решение
+
+Container_Boundary(пользователи, "Взаимодействие с пользователями") {
+    Container(веб_портал, "Веб-портал", "React модуль", "Расширение для портала АгроТех")
+    Container(мобил_приложение, "Мобильное приложение", "Flutter модуль", "Расширение для мобильного приложения")
+}
+
+Container(api_шлюз, "API шлюз", "Node.js", "Единая точка входа для API") {
+    Boundary(контроллеры, "Внешний слой API", "Проверка прав доступа") {
+        Component(UserController, "UserController", "Управление пользователями")
+        Component(ScheduleController, "ScheduleController", "Доступ к расписанию и управление им")
+        Component(MetricController, "MetricController", "Отображение и внесение метрик")
+        Component(ReportController, "ReportController", "Запрос и отображение отчётов")
+        Component(EventController, "EventController", "Доставка событий")
+    }
+
+    Component(сервис, "Бизнес логика", "Передача запросов и возврат ответов")
+}
+
+' Шина событий
+Container(nats_центр, "Брокер сообщений", "NATS", "Команды, телеметрия, метаданные")
+
+' Взаимодействие с пользователями
+Rel(пользователи, api_шлюз, "API запросы", "HTTPS/WebSocket")
+
+' Внутреннее взаимодействие
+Rel(UserController, сервис, "Запрос к бизнес логике")
+Rel(ScheduleController, сервис, "Запрос к бизнес логике")
+Rel(MetricController, сервис, "Запрос к бизнес логике")
+Rel(ReportController, сервис, "Запрос к бизнес логике")
+Rel(EventController, сервис, "Запрос к бизнес логике")
+
+' Взаимодействие с NATS
+BiRel(сервис, nats_центр, "Передача запросов и получение ответов")
+
+@enduml
